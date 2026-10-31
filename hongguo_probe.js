@@ -1,47 +1,47 @@
 
 /*
- * Coconut Probe v0.0.6
- * Home data format test
+ * Coconut Probe v0.0.7
+ * Global object registration test
  */
 
-var testVideo = {
+var testItem = {
   id: "test001",
-  title: "红果短剧测试",
-  name: "红果短剧测试",
+  title: "Coconut 接口测试",
+  name: "Coconut 接口测试",
   cover: "",
-  poster: "",
-  description: "用于测试 Coconut 首页接口"
+  description: "测试模块接口"
 };
 
-globalThis.home = async function () {
-  return {
-    list: [testVideo],
-    items: [testVideo],
-    sections: [{
-      id: "test",
-      title: "测试分类",
-      name: "测试分类",
-      list: [testVideo],
-      items: [testVideo]
-    }]
-  };
+var api = {
+  home: async function () {
+    return {
+      list: [testItem],
+      items: [testItem]
+    };
+  },
+
+  detail: async function (id) {
+    return {
+      id: id,
+      title: testItem.title,
+      episodes: []
+    };
+  },
+
+  play: async function () {
+    return { url: "" };
+  },
+
+  search: async function () {
+    return { list: [] };
+  }
 };
 
-globalThis.detail = async function (id) {
-  return {
-    id: id,
-    title: testVideo.title,
-    episodes: [{
-      id: "ep001",
-      title: "第1集"
-    }]
-  };
-};
+globalThis.home = api.home;
+globalThis.detail = api.detail;
+globalThis.play = api.play;
+globalThis.search = api.search;
 
-globalThis.play = async function () {
-  return { url: "" };
-};
-
-globalThis.search = async function () {
-  return { list: [testVideo] };
-};
+globalThis.plugin = api;
+globalThis.moduleApi = api;
+globalThis.coconut = api;
