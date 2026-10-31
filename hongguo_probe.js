@@ -1,43 +1,53 @@
 
 /*
- * Coconut Hongguo Probe v0.2.2
- * 首页数据结构诊断版
+ * Coconut Hongguo Probe v0.2.3
+ * 精准诊断 category_$ 数据结构
  *
- * 不播放红果正片
- * 播放接口保留公开 HLS 测试地址
+ * 仅诊断公开网页数据
+ * 不访问红果正片播放接口
  */
 
 var HG_BASE = "https://hongguoduanju.com";
 
-function hgKeys(value) {
-  if (!value || typeof value !== "object") {
-    return "非对象";
+function hgType(v) {
+  if (Array.isArray(v)) {
+    return "数组(" + v.length + ")";
   }
-
-  return Object.keys(value).slice(0, 15).join(", ") || "空对象";
+  if (v === null) return "null";
+  return typeof v;
 }
 
-function hgType(value) {
-  if (Array.isArray(value)) {
-    return "数组(" + value.length + ")";
+function hgKeys(v) {
+  if (!v || typeof v !== "object") {
+    return String(v).slice(0, 100);
   }
 
-  if (value === null) return "null";
+  return Object.keys(v).slice(0, 12).join(",");
+}
 
-  return typeof value;
+function hgCard(index, title, detail) {
+  var name = String(title).slice(0, 110);
+
+  return {
+    id: "diag_" + index,
+    title: name,
+    name: name,
+    cover: "",
+    description: String(detail || "").slice(0, 800)
+  };
 }
 
 function hgParseRouterData(html) {
-  var pos = html.indexOf("_ROUTER_DATA");
+  var p = html.indexOf("_ROUTER_DATA");
 
-  if (pos < 0) {
-    throw new Error("网页中没有 _ROUTER_DATA");
+  if (p < 0) {
+    throw new Error("未找到 _ROUTER_DATA");
   }
 
-  var start = html.indexOf("{", pos);
+  var start = html.indexOf("{", p);
 
   if (start < 0) {
-    throw new Error("没有找到 JSON 起始位置");
+    throw new Error("未找到 JSON 起始位置");
   }
 
   var depth = 0;
@@ -64,180 +74,158 @@ function hgParseRouterData(html) {
         depth--;
 
         if (depth === 0) {
-          return JSON.parse(html.slice(start, i + 1));
+          return JSON.parse(
+            html.slice(start, i + 1)
+          );
         }
       }
     }
   }
 
-  throw new Error("JSON 解析范围不完整");
+  throw new Error("JSON 不完整");
 }
 
-function hgCard(index, title, description) {
-  var name = String(title || "未知").slice(0, 90);
+function hgInspect(value, path, cards, depth) {
+  if (cards.length >= 45 || depth > 3) {
+    return;
+  }
 
-  return {
-    id: "diag_" + index,
-    title: name,
-    name: name,
-    cover: "",
-    description: String(description || "").slice(0, 1000)
-  };
-}
+  var type = hgType(value);
+  var keys = hgKeys(value);
 
-function hgCollect(data) {
-  var cards = [];
-
-  cards.push(hgCard(
-    cards.length,
-    "01 顶层字段",
-    hgKeys(data)
-  ));
-
-  var loader = data.loaderData || {};
-
-  cards.push(hgCard(
-    cards.length,
-    "02 loaderData 字段",
-    hgKeys(loader)
-  ));
-
-  var names = Object.keys(loader);
-
-  for (var i = 0; i < names.length; i++) {
-    var routeName = names[i];
-    var route = loader[routeName];
-
-    cards.push(hgCard(
+  cards.push(
+    hgCard(
       cards.length,
-      "03 路由：" + routeName,
-      hgKeys(route)
-    ));
+      path + " [" + type + "]",
+      keys
+    )
+  );
 
-    if (!route || typeof route !== "object") {
+  if (!value || typeof value !== "object") {
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    if (value.length > 0) {
+      hgInspect(
+        value[0],
+        path + "[0]",
+        cards,
+        depth + 1
+      );
+    }
+    return;
+  }
+
+  var fields = Object.keys(value);
+
+  for (var i = 0; i < fields.length; i++) {
+    if (cards.length >= 45) break;
+
+    var key = fields[i];
+
+    // 跳过不相关的请求环境字段
+    if (
+      key === "req" ||
+      key === "request" ||
+      key === "headers" ||
+      key === "context"
+    ) {
       continue;
     }
 
-    var fields = Object.keys(route);
-
-    for (var j = 0; j < fields.length; j++) {
-      var field = fields[j];
-      var value = route[field];
-
-      cards.push(hgCard(
-        cards.length,
-        "字段：" + field,
-        hgType(value) + " | " + hgKeys(value)
-      ));
-
-      if (Array.isArray(value) && value.length) {
-        cards.push(hgCard(
-          cards.length,
-          "数组首项：" + field,
-          hgKeys(value[0])
-        ));
-      }
-
-      if (
-        value &&
-        typeof value === "object" &&
-        !Array.isArray(value)
-      ) {
-        var innerFields = Object.keys(value);
-
-        for (var k = 0; k < innerFields.length; k++) {
-          var innerName = innerFields[k];
-          var innerValue = value[innerName];
-
-          cards.push(hgCard(
-            cards.length,
-            field + "." + innerName,
-            hgType(innerValue) + " | " +
-            hgKeys(innerValue)
-          ));
-
-          if (
-            Array.isArray(innerValue) &&
-            innerValue.length
-          ) {
-            cards.push(hgCard(
-              cards.length,
-              "首项：" + innerName,
-              hgKeys(innerValue[0])
-            ));
-          }
-
-          if (cards.length >= 70) break;
-        }
-      }
-
-      if (cards.length >= 70) break;
-    }
-
-    if (cards.length >= 70) break;
+    hgInspect(
+      value[key],
+      path + "." + key,
+      cards,
+      depth + 1
+    );
   }
-
-  return cards;
 }
 
-// 首页：显示诊断卡片
 var home = async function () {
-  var url = HG_BASE +
-    "/category?tab=1&sort_type=1";
-
-  var response = await fetch(url);
+  var response = await fetch(
+    HG_BASE + "/category?tab=1&sort_type=1"
+  );
 
   if (!response.ok) {
     throw new Error(
-      "红果官网 HTTP " + response.status
+      "HTTP " + response.status
     );
   }
 
   var html = await response.text();
-
   var data = hgParseRouterData(html);
 
-  var items = hgCollect(data);
+  var loader = data.loaderData || {};
+  var cards = [];
 
-  if (!items.length) {
-    items = [
-      hgCard(0, "没有诊断数据", "网页结构为空")
-    ];
+  cards.push(
+    hgCard(
+      cards.length,
+      "v0.2.3 精准诊断",
+      "只检查 category_$"
+    )
+  );
+
+  cards.push(
+    hgCard(
+      cards.length,
+      "loaderData 路由：" +
+        Object.keys(loader).join(","),
+      "检查是否包含 category_$"
+    )
+  );
+
+  var route = loader["category_$"];
+
+  if (!route) {
+    cards.push(
+      hgCard(
+        cards.length,
+        "未找到 category_$",
+        "现有路由：" +
+          Object.keys(loader).join(",")
+      )
+    );
+  } else {
+    hgInspect(
+      route,
+      "category_$",
+      cards,
+      0
+    );
   }
 
   return {
-    list: items,
-    items: items,
-    videos: items
+    list: cards,
+    items: cards,
+    videos: cards
   };
 };
 
-// 详情：显示对应诊断卡片的信息
-var extractDetails = async function (input) {
-  var title = "红果数据诊断";
-  var description = "请查看首页诊断卡片";
-
-  if (input && typeof input === "object") {
-    title = input.title || input.name || title;
-    description = input.description || description;
-  }
-
+// 详情：诊断占位
+var extractDetails = async function () {
   return {
     id: "diagnostic",
-    title: title,
-    name: title,
-    description: description,
-    episodes: [{
-      id: "test_episode",
-      title: "测试播放",
-      name: "测试播放"
-    }]
+    title: "v0.2.3 数据诊断",
+    name: "v0.2.3 数据诊断",
+    description: "请查看首页卡片标题",
+    episodes: [
+      {
+        id: "test",
+        title: "测试集",
+        name: "测试集"
+      }
+    ]
   };
 };
 
-// 播放：继续使用公开测试视频
+// 播放：保留已验证的测试地址
 var extractStreamUrl = async function () {
   return {
-    url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+    url:
+      "https://test-streams.mux.dev/" +
+      "x36xhzz/x36xhzz.m3u8"
   };
 };
