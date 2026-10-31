@@ -1,61 +1,50 @@
 
-/*
- * Coconut Compatibility Probe v0.0.3
- * Test global function registration
+/**
+ * Coconut Module Probe v0.0.4
+ * ES Module export compatibility test
  */
 
-const testItem = {
-  id: "test001",
-  title: "红果短剧接口测试",
-  name: "红果短剧接口测试",
-  cover: "",
-  description: "Coconut 全局函数测试"
-};
+export const id = "hongguo-probe";
+export const name = "红果模块测试";
+export const version = "0.0.4";
 
-async function home() {
+export async function home() {
   return {
-    list: [testItem],
-    items: [testItem],
+    list: [],
+    items: [],
     sections: [],
     categories: []
   };
 }
 
-async function getHome() {
-  return await home();
-}
-
-async function detail(id) {
+export async function detail(id) {
   return {
     id: id,
-    title: testItem.title,
+    title: "测试视频",
     episodes: []
   };
 }
 
-async function getDetail(id) {
-  return await detail(id);
-}
-
-async function play(id) {
-  return { url: "" };
-}
-
-async function getPlayUrl(id) {
-  return await play(id);
-}
-
-async function search(keyword) {
+export async function play(id) {
   return {
-    list: [],
-    items: []
+    url: ""
   };
 }
 
-async function category() {
-  return [];
+export async function search(keyword) {
+  return {
+    list: []
+  };
 }
 
-async function getCategories() {
-  return [];
+export async function getHome() {
+  return home();
+}
+
+export async function getDetail(id) {
+  return detail(id);
+}
+
+export async function getPlayUrl(id) {
+  return play(id);
 }
