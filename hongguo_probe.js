@@ -1,50 +1,41 @@
 
-/**
- * Coconut Module Probe v0.0.4
- * ES Module export compatibility test
+/*
+ * Coconut Probe v0.0.5
+ * Explicit global registration test
  */
 
-export const id = "hongguo-probe";
-export const name = "红果模块测试";
-export const version = "0.0.4";
-
-export async function home() {
+var probeHome = async function () {
   return {
     list: [],
     items: [],
     sections: [],
     categories: []
   };
-}
+};
 
-export async function detail(id) {
+var probeDetail = async function (id) {
   return {
     id: id,
     title: "测试视频",
     episodes: []
   };
-}
+};
 
-export async function play(id) {
-  return {
-    url: ""
-  };
-}
+var probePlay = async function (id) {
+  return { url: "" };
+};
 
-export async function search(keyword) {
-  return {
-    list: []
-  };
-}
+globalThis.home = probeHome;
+globalThis.getHome = probeHome;
+globalThis.detail = probeDetail;
+globalThis.getDetail = probeDetail;
+globalThis.play = probePlay;
+globalThis.getPlayUrl = probePlay;
 
-export async function getHome() {
-  return home();
-}
+globalThis.search = async function () {
+  return { list: [] };
+};
 
-export async function getDetail(id) {
-  return detail(id);
-}
-
-export async function getPlayUrl(id) {
-  return play(id);
-}
+globalThis.getCategories = async function () {
+  return [];
+};
