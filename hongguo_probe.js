@@ -1,36 +1,43 @@
+const item = {
+  id: "probe-episode",
+  title: "Coconut home 测试 v0.0.2",
+  name: "Coconut home 测试 v0.0.2",
+  cover: "",
+  description: "测试模块，不提供播放"
+};
 
-/**
- * Coconut - Hongguo Compatibility Probe
- * Version: 0.0.1
- * Purpose: Test Coconut JS module loading.
- * Not a working video source.
- */
+const section = {
+  id: "probe",
+  name: "测试分类",
+  title: "测试分类",
+  list: [item],
+  items: [item]
+};
 
 const plugin = {
   id: "hongguo-test",
-  name: "红果短剧（测试）",
-  version: "0.0.1",
-  description: "Coconut JavaScript 模块兼容性测试",
+  name: "红果短剧（测试 v2）",
+  version: "0.0.2",
+
+  async home() {
+    return {
+      list: [item],
+      items: [item],
+      sections: [section],
+      categories: [section]
+    };
+  },
+
+  async getHome() {
+    return this.home();
+  },
 
   async getCategories() {
-    return [
-      { id: "test", name: "测试分类" }
-    ];
+    return [{ id: "probe", name: "测试分类" }];
   },
 
   async getVideos(categoryId, page = 1) {
-    return {
-      list: [
-        {
-          id: "test-video",
-          title: "红果模块测试",
-          cover: "",
-          description: "仅用于验证模块加载"
-        }
-      ],
-      page,
-      hasMore: false
-    };
+    return { list: [item], page, hasMore: false };
   },
 
   async search(keyword, page = 1) {
@@ -38,18 +45,14 @@ const plugin = {
   },
 
   async getDetail(videoId) {
-    return {
-      id: videoId,
-      title: "红果模块测试",
-      episodes: []
-    };
+    return { id: videoId, title: item.title, episodes: [] };
   },
 
-  async getPlayUrl(videoId, episodeId) {
+  async getPlayUrl() {
     return { url: "" };
   }
 };
 
-if (typeof module !== "undefined") {
+if (typeof module !== "undefined" && module.exports) {
   module.exports = plugin;
 }
