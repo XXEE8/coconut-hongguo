@@ -1,79 +1,39 @@
 
 /*
- * Coconut Hongguo Probe v0.1.1
- * Home / Details / Stream URL compatibility
+ * Coconut Probe v0.1.2
+ * Top-level function registration test
  */
 
-var testItem = {
-  id: "test001",
-  title: "Coconut 接口测试",
-  name: "Coconut 接口测试",
-  cover: "",
-  description: "红果模块兼容性测试"
+var home = async function () {
+  return {
+    list: [
+      {
+        id: "test001",
+        title: "顶层函数测试",
+        name: "顶层函数测试",
+        cover: "",
+        description: "测试 Coconut 是否识别顶层函数"
+      }
+    ]
+  };
 };
 
-var testEpisode = {
-  id: "episode001",
-  title: "第1集",
-  name: "第1集"
+var extractDetails = async function () {
+  return {
+    id: "test001",
+    title: "顶层函数测试",
+    description: "详情接口测试",
+    episodes: [
+      {
+        id: "ep001",
+        title: "第1集"
+      }
+    ]
+  };
 };
 
-var api = {
-
-  home: async function () {
-    return {
-      list: [testItem],
-      items: [testItem]
-    };
-  },
-
-  extractDetails: async function (item) {
-    return {
-      id: "test001",
-      title: "Coconut 接口测试",
-      name: "Coconut 接口测试",
-      cover: "",
-      description: "详情接口测试",
-      episodes: [testEpisode]
-    };
-  },
-
-  extractStreamUrl: async function (episode) {
-    return {
-      url: "",
-      headers: {}
-    };
-  },
-
-  search: async function (keyword) {
-    return {
-      list: [testItem],
-      items: [testItem]
-    };
-  }
-
+var extractStreamUrl = async function () {
+  return {
+    url: ""
+  };
 };
-
-// Compatibility aliases
-api.detail = api.extractDetails;
-api.play = api.extractStreamUrl;
-api.getHome = api.home;
-api.getDetail = api.extractDetails;
-api.getPlayUrl = api.extractStreamUrl;
-
-// Register global functions
-globalThis.home = api.home;
-globalThis.extractDetails = api.extractDetails;
-globalThis.extractStreamUrl = api.extractStreamUrl;
-globalThis.search = api.search;
-
-globalThis.detail = api.detail;
-globalThis.play = api.play;
-globalThis.getHome = api.getHome;
-globalThis.getDetail = api.getDetail;
-globalThis.getPlayUrl = api.getPlayUrl;
-
-// Register API objects
-globalThis.plugin = api;
-globalThis.moduleApi = api;
-globalThis.coconut = api;
