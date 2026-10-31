@@ -1,48 +1,43 @@
 
 /*
- * Coconut Hongguo Probe v0.2.1
+ * Coconut Hongguo Probe v0.2.2
+ * 首页数据结构诊断版
  *
- * 1. 真实红果短剧目录
- * 2. 尝试获取真实剧集详情
- * 3. 尝试获取真实分集 ID
- * 4. 播放仍使用公开 HLS 测试视频
+ * 不播放红果正片
+ * 播放接口保留公开 HLS 测试地址
  */
 
 var HG_BASE = "https://hongguoduanju.com";
-var HG_CACHE = {};
 
-function hgPick(obj, keys) {
-  if (!obj || typeof obj !== "object") {
-    return "";
+function hgKeys(value) {
+  if (!value || typeof value !== "object") {
+    return "非对象";
   }
 
-  for (var i = 0; i < keys.length; i++) {
-    var value = obj[keys[i]];
+  return Object.keys(value).slice(0, 15).join(", ") || "空对象";
+}
 
-    if (
-      value !== undefined &&
-      value !== null &&
-      value !== ""
-    ) {
-      return value;
-    }
+function hgType(value) {
+  if (Array.isArray(value)) {
+    return "数组(" + value.length + ")";
   }
 
-  return "";
+  if (value === null) return "null";
+
+  return typeof value;
 }
 
 function hgParseRouterData(html) {
-  var marker = "_ROUTER_DATA";
-  var position = html.indexOf(marker);
+  var pos = html.indexOf("_ROUTER_DATA");
 
-  if (position < 0) {
-    throw new Error("未找到网页数据");
+  if (pos < 0) {
+    throw new Error("网页中没有 _ROUTER_DATA");
   }
 
-  var start = html.indexOf("{", position);
+  var start = html.indexOf("{", pos);
 
   if (start < 0) {
-    throw new Error("未找到 JSON");
+    throw new Error("没有找到 JSON 起始位置");
   }
 
   var depth = 0;
@@ -69,208 +64,145 @@ function hgParseRouterData(html) {
         depth--;
 
         if (depth === 0) {
-          return JSON.parse(
-            html.slice(start, i + 1)
-          );
+          return JSON.parse(html.slice(start, i + 1));
         }
       }
     }
   }
 
-  throw new Error("JSON 数据不完整");
+  throw new Error("JSON 解析范围不完整");
 }
 
-async function hgGetPage(url) {
+function hgCard(index, title, description) {
+  var name = String(title || "未知").slice(0, 90);
+
+  return {
+    id: "diag_" + index,
+    title: name,
+    name: name,
+    cover: "",
+    description: String(description || "").slice(0, 1000)
+  };
+}
+
+function hgCollect(data) {
+  var cards = [];
+
+  cards.push(hgCard(
+    cards.length,
+    "01 顶层字段",
+    hgKeys(data)
+  ));
+
+  var loader = data.loaderData || {};
+
+  cards.push(hgCard(
+    cards.length,
+    "02 loaderData 字段",
+    hgKeys(loader)
+  ));
+
+  var names = Object.keys(loader);
+
+  for (var i = 0; i < names.length; i++) {
+    var routeName = names[i];
+    var route = loader[routeName];
+
+    cards.push(hgCard(
+      cards.length,
+      "03 路由：" + routeName,
+      hgKeys(route)
+    ));
+
+    if (!route || typeof route !== "object") {
+      continue;
+    }
+
+    var fields = Object.keys(route);
+
+    for (var j = 0; j < fields.length; j++) {
+      var field = fields[j];
+      var value = route[field];
+
+      cards.push(hgCard(
+        cards.length,
+        "字段：" + field,
+        hgType(value) + " | " + hgKeys(value)
+      ));
+
+      if (Array.isArray(value) && value.length) {
+        cards.push(hgCard(
+          cards.length,
+          "数组首项：" + field,
+          hgKeys(value[0])
+        ));
+      }
+
+      if (
+        value &&
+        typeof value === "object" &&
+        !Array.isArray(value)
+      ) {
+        var innerFields = Object.keys(value);
+
+        for (var k = 0; k < innerFields.length; k++) {
+          var innerName = innerFields[k];
+          var innerValue = value[innerName];
+
+          cards.push(hgCard(
+            cards.length,
+            field + "." + innerName,
+            hgType(innerValue) + " | " +
+            hgKeys(innerValue)
+          ));
+
+          if (
+            Array.isArray(innerValue) &&
+            innerValue.length
+          ) {
+            cards.push(hgCard(
+              cards.length,
+              "首项：" + innerName,
+              hgKeys(innerValue[0])
+            ));
+          }
+
+          if (cards.length >= 70) break;
+        }
+      }
+
+      if (cards.length >= 70) break;
+    }
+
+    if (cards.length >= 70) break;
+  }
+
+  return cards;
+}
+
+// 首页：显示诊断卡片
+var home = async function () {
+  var url = HG_BASE +
+    "/category?tab=1&sort_type=1";
+
   var response = await fetch(url);
 
   if (!response.ok) {
     throw new Error(
-      "请求失败 HTTP " + response.status
+      "红果官网 HTTP " + response.status
     );
   }
 
   var html = await response.text();
 
-  return hgParseRouterData(html);
-}
+  var data = hgParseRouterData(html);
 
-function hgFindRoute(data, preferred) {
-  var loader = data.loaderData || {};
-
-  if (loader[preferred]) {
-    return loader[preferred];
-  }
-
-  var values = Object.values(loader);
-
-  return values.length ? values[0] : {};
-}
-
-function hgFindList(route) {
-  var candidates = [
-    route.recommendList,
-
-    route.categoryData &&
-      route.categoryData.recommendList,
-
-    route.data &&
-      route.data.recommendList
-  ];
-
-  for (var i = 0; i < candidates.length; i++) {
-    if (Array.isArray(candidates[i])) {
-      return candidates[i];
-    }
-  }
-
-  return [];
-}
-
-function hgMakeItem(entry) {
-  var v =
-    entry.video_data ||
-    entry.videoData ||
-    entry;
-
-  var id = String(
-    hgPick(v, [
-      "series_id",
-      "seriesId",
-      "id"
-    ])
-  );
-
-  var title = String(
-    hgPick(v, [
-      "series_name",
-      "series_title",
-      "seriesName",
-      "title",
-      "name"
-    ]) ||
-    hgPick(entry, [
-      "title",
-      "name"
-    ]) ||
-    "红果短剧"
-  );
-
-  var cover = hgPick(v, [
-    "series_cover",
-    "cover",
-    "cover_url",
-    "coverUrl",
-    "thumb_url",
-    "poster"
-  ]);
-
-  if (
-    cover &&
-    typeof cover === "object"
-  ) {
-    cover = hgPick(cover, [
-      "url",
-      "uri"
-    ]);
-  }
-
-  var description = String(
-    hgPick(v, [
-      "series_intro",
-      "description",
-      "intro",
-      "abstract"
-    ]) || ""
-  );
-
-  var item = {
-    id: id,
-    title: title,
-    name: title,
-    cover: String(cover || ""),
-    description: description,
-    url:
-      HG_BASE +
-      "/detail?series_id=" +
-      encodeURIComponent(id)
-  };
-
-  if (id) {
-    HG_CACHE[id] = item;
-  }
-
-  return item;
-}
-
-function hgResolveId(input) {
-  if (
-    typeof input === "string" ||
-    typeof input === "number"
-  ) {
-    var value = String(input);
-
-    var match = value.match(
-      /series_id=([^&#]+)/
-    );
-
-    if (match) {
-      return decodeURIComponent(match[1]);
-    }
-
-    if (/^\d+$/.test(value)) {
-      return value;
-    }
-
-    return "";
-  }
-
-  if (
-    input &&
-    typeof input === "object"
-  ) {
-    var candidate = hgPick(input, [
-      "id",
-      "series_id",
-      "seriesId",
-      "url",
-      "link"
-    ]);
-
-    if (candidate) {
-      return hgResolveId(candidate);
-    }
-  }
-
-  return "";
-}
-
-// =========================
-// 首页：真实红果短剧目录
-// =========================
-
-var home = async function () {
-  var data = await hgGetPage(
-    HG_BASE +
-    "/category?tab=1&sort_type=1"
-  );
-
-  var route = hgFindRoute(
-    data,
-    "category_page"
-  );
-
-  var list = hgFindList(route);
-
-  var items = list
-    .map(hgMakeItem)
-    .filter(function (item) {
-      return !!item.id;
-    });
+  var items = hgCollect(data);
 
   if (!items.length) {
-    throw new Error(
-      "未找到红果短剧目录"
-    );
+    items = [
+      hgCard(0, "没有诊断数据", "网页结构为空")
+    ];
   }
 
   return {
@@ -280,143 +212,32 @@ var home = async function () {
   };
 };
 
-// =========================
-// 详情：尝试获取真实剧集
-// =========================
-
+// 详情：显示对应诊断卡片的信息
 var extractDetails = async function (input) {
-  var id = hgResolveId(input);
+  var title = "红果数据诊断";
+  var description = "请查看首页诊断卡片";
 
-  if (!id) {
-    var cachedIds = Object.keys(
-      HG_CACHE
-    );
-
-    if (cachedIds.length === 1) {
-      id = cachedIds[0];
-    }
-  }
-
-  if (!id) {
-    throw new Error(
-      "无法识别剧集ID"
-    );
-  }
-
-  var data = await hgGetPage(
-    HG_BASE +
-    "/detail?series_id=" +
-    encodeURIComponent(id)
-  );
-
-  var route = hgFindRoute(
-    data,
-    "detail_page"
-  );
-
-  var detail =
-    route.seriesDetail ||
-    (route.data &&
-      route.data.seriesDetail) ||
-    {};
-
-  var cached = HG_CACHE[id] || {};
-
-  var title = String(
-    hgPick(detail, [
-      "series_name",
-      "series_title",
-      "title",
-      "name"
-    ]) ||
-    cached.title ||
-    "红果短剧"
-  );
-
-  var cover = hgPick(detail, [
-    "series_cover",
-    "cover",
-    "cover_url"
-  ]);
-
-  if (
-    cover &&
-    typeof cover === "object"
-  ) {
-    cover = hgPick(cover, [
-      "url",
-      "uri"
-    ]);
-  }
-
-  var description = String(
-    hgPick(detail, [
-      "series_intro",
-      "description",
-      "intro"
-    ]) ||
-    cached.description ||
-    ""
-  );
-
-  var vids = detail.vid_list || [];
-
-  if (!Array.isArray(vids)) {
-    vids = [];
-  }
-
-  var episodes = vids.map(
-    function (vid, index) {
-      var episodeId =
-        typeof vid === "object"
-          ? hgPick(vid, [
-              "vid",
-              "video_id",
-              "id"
-            ])
-          : vid;
-
-      return {
-        id: String(episodeId),
-        title:
-          "第" + (index + 1) + "集",
-        name:
-          "第" + (index + 1) + "集",
-        url: String(episodeId)
-      };
-    }
-  );
-
-  if (!episodes.length) {
-    throw new Error(
-      "已请求详情，但未找到真实分集ID"
-    );
+  if (input && typeof input === "object") {
+    title = input.title || input.name || title;
+    description = input.description || description;
   }
 
   return {
-    id: id,
+    id: "diagnostic",
     title: title,
     name: title,
-    cover: String(
-      cover || cached.cover || ""
-    ),
     description: description,
-    episodeCount: Number(
-      detail.episode_cnt ||
-      episodes.length
-    ),
-    episodes: episodes
+    episodes: [{
+      id: "test_episode",
+      title: "测试播放",
+      name: "测试播放"
+    }]
   };
 };
 
-// =========================
-// 播放：公开测试视频
-// =========================
-
+// 播放：继续使用公开测试视频
 var extractStreamUrl = async function () {
   return {
-    url:
-      "https://test-streams.mux.dev/" +
-      "x36xhzz/x36xhzz.m3u8"
+    url: "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
   };
 };
