@@ -1,58 +1,61 @@
-const item = {
-  id: "probe-episode",
-  title: "Coconut home 测试 v0.0.2",
-  name: "Coconut home 测试 v0.0.2",
+
+/*
+ * Coconut Compatibility Probe v0.0.3
+ * Test global function registration
+ */
+
+const testItem = {
+  id: "test001",
+  title: "红果短剧接口测试",
+  name: "红果短剧接口测试",
   cover: "",
-  description: "测试模块，不提供播放"
+  description: "Coconut 全局函数测试"
 };
 
-const section = {
-  id: "probe",
-  name: "测试分类",
-  title: "测试分类",
-  list: [item],
-  items: [item]
-};
+async function home() {
+  return {
+    list: [testItem],
+    items: [testItem],
+    sections: [],
+    categories: []
+  };
+}
 
-const plugin = {
-  id: "hongguo-test",
-  name: "红果短剧（测试 v2）",
-  version: "0.0.2",
+async function getHome() {
+  return await home();
+}
 
-  async home() {
-    return {
-      list: [item],
-      items: [item],
-      sections: [section],
-      categories: [section]
-    };
-  },
+async function detail(id) {
+  return {
+    id: id,
+    title: testItem.title,
+    episodes: []
+  };
+}
 
-  async getHome() {
-    return this.home();
-  },
+async function getDetail(id) {
+  return await detail(id);
+}
 
-  async getCategories() {
-    return [{ id: "probe", name: "测试分类" }];
-  },
+async function play(id) {
+  return { url: "" };
+}
 
-  async getVideos(categoryId, page = 1) {
-    return { list: [item], page, hasMore: false };
-  },
+async function getPlayUrl(id) {
+  return await play(id);
+}
 
-  async search(keyword, page = 1) {
-    return { list: [], page, hasMore: false };
-  },
+async function search(keyword) {
+  return {
+    list: [],
+    items: []
+  };
+}
 
-  async getDetail(videoId) {
-    return { id: videoId, title: item.title, episodes: [] };
-  },
+async function category() {
+  return [];
+}
 
-  async getPlayUrl() {
-    return { url: "" };
-  }
-};
-
-if (typeof module !== "undefined" && module.exports) {
-  module.exports = plugin;
+async function getCategories() {
+  return [];
 }
