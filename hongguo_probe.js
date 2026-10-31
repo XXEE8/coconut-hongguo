@@ -1,41 +1,47 @@
 
 /*
- * Coconut Probe v0.0.5
- * Explicit global registration test
+ * Coconut Probe v0.0.6
+ * Home data format test
  */
 
-var probeHome = async function () {
+var testVideo = {
+  id: "test001",
+  title: "红果短剧测试",
+  name: "红果短剧测试",
+  cover: "",
+  poster: "",
+  description: "用于测试 Coconut 首页接口"
+};
+
+globalThis.home = async function () {
   return {
-    list: [],
-    items: [],
-    sections: [],
-    categories: []
+    list: [testVideo],
+    items: [testVideo],
+    sections: [{
+      id: "test",
+      title: "测试分类",
+      name: "测试分类",
+      list: [testVideo],
+      items: [testVideo]
+    }]
   };
 };
 
-var probeDetail = async function (id) {
+globalThis.detail = async function (id) {
   return {
     id: id,
-    title: "测试视频",
-    episodes: []
+    title: testVideo.title,
+    episodes: [{
+      id: "ep001",
+      title: "第1集"
+    }]
   };
 };
 
-var probePlay = async function (id) {
+globalThis.play = async function () {
   return { url: "" };
 };
 
-globalThis.home = probeHome;
-globalThis.getHome = probeHome;
-globalThis.detail = probeDetail;
-globalThis.getDetail = probeDetail;
-globalThis.play = probePlay;
-globalThis.getPlayUrl = probePlay;
-
 globalThis.search = async function () {
-  return { list: [] };
-};
-
-globalThis.getCategories = async function () {
-  return [];
+  return { list: [testVideo] };
 };
