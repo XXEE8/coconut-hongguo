@@ -76,3 +76,17 @@ globalThis.getPlayUrl = api.play;
 globalThis.getCategories = async function () {
   return [];
 };
+/*
+ * Coconut Probe v0.1.0
+ * Playback URL interface test
+ */
+
+api.extractStreamUrl = async function (episode) {
+  return {
+    url: "",
+    headers: {}
+  };
+};
+
+globalThis.extractStreamUrl = api.extractStreamUrl;
+globalThis.plugin.extractStreamUrl = api.extractStreamUrl;
